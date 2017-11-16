@@ -267,7 +267,7 @@ class Work extends Command {
                     break;
             }
         }
-        $res = $client->request('POST', 'http://spider.filesearch.me/api/jobs/receive', [
+        $client->request('POST', 'http://spider.filesearch.me/api/jobs/receive', [
             'headers' => [
                 'x-authorization' => $this->api_key
             ],
@@ -303,13 +303,16 @@ class Work extends Command {
         /**
          * Grab source code from website.
          */
-        $client = new \GuzzleHttp\Client();
+        $client = new \GuzzleHttp\Client(['http_errors' => false]);
         $res = $client->request('GET', $job->url);
+
         /**
          * Check for valid 200 response.
          */
         if( $res->getStatusCode() == 200 )
         {
+            $page_title = $this->parseTitle($res->getBody());
+            $page_description = $this->parseDescription($res->getBody());
             /**
              * Find all URLs on page using regex.
              */
@@ -363,7 +366,10 @@ class Work extends Command {
                             {
                                 $data['parse'][] = [
                                     'host' => $host->id,
-                                    'url' => $url_
+                                    'url' => $url_,
+                                    'page_title' => $page_title,
+                                    'page_description' => $page_description,
+                                    'page_url' => $job->url
                                 ];
                             }
                         }
@@ -448,7 +454,7 @@ class Work extends Command {
         /**
          * Convert size to kilobytes.
          */
-        $return['size'] = $this->convert_size( $return['size'] );
+        $return['size'] = $this->convert_size( trim( $return['size'] ) );
         /**
          * Extract extension from filename.
          */
@@ -491,5 +497,33 @@ class Work extends Command {
             if (stripos($str,'.'.$a) !== false) return true;
         }
         return false;
+    }
+
+    private function parseDescription($html) {
+        // Get the 'content' attribute value in a <meta name="description" ... />
+        $matches = array();
+        // Search for <meta name="description" content="Buy my stuff" />
+        preg_match('/<meta.*?name=("|\')description("|\').*?content=("|\')(.*?)("|\')/i', $html, $matches);
+        if (count($matches) > 4) {
+            return trim($matches[4]);
+        }
+        // Order of attributes could be swapped around: <meta content="Buy my stuff" name="description" />
+        preg_match('/<meta.*?content=("|\')(.*?)("|\').*?name=("|\')description("|\')/i', $html, $matches);
+        if (count($matches) > 2) {
+            return trim($matches[2]);
+        }
+        // No match
+        return null;
+    }
+
+    private function parseTitle($html) {
+        $res = preg_match("/<title>(.*)<\/title>/siU", $html, $title_matches);
+        if (!$res)
+            return null;
+
+        // Clean up title: remove EOL's and excessive whitespace.
+        $title = preg_replace('/\s+/', ' ', $title_matches[1]);
+        $title = trim($title);
+        return $title;
     }
 }
