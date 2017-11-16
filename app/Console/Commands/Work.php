@@ -253,30 +253,36 @@ class Work extends Command {
         $completed = [];
 
         /**
-         * Process jobs.
+         * Make sure there are jobs to process.
          */
-        foreach( $jobs->jobs AS $job )
+        if( count( $jobs ) )
         {
-            switch( $job->type )
+            /**
+             * Process jobs.
+             */
+            foreach( $jobs->jobs AS $job )
             {
-                case "spider":
-                    $completed[$job->id] = $this->spider($job,$jobs->hosts);
-                    break;
-                case "parse":
-                    $completed[$job->id] = $this->parse($job);
-                    break;
+                switch( $job->type )
+                {
+                    case "spider":
+                        $completed[$job->id] = $this->spider($job,$jobs->hosts);
+                        break;
+                    case "parse":
+                        $completed[$job->id] = $this->parse($job);
+                        break;
+                }
             }
+            $client->request('POST', 'http://spider.filesearch.me/api/jobs/receive', [
+                'headers' => [
+                    'x-authorization' => $this->api_key
+                ],
+                'form_params' => [
+                    'version' => env('APP_BOT_VERSION'),
+                    'identifier' => md5($this->server_addr),
+                    'data' => json_encode($completed)
+                ]
+            ]);
         }
-        $client->request('POST', 'http://spider.filesearch.me/api/jobs/receive', [
-            'headers' => [
-                'x-authorization' => $this->api_key
-            ],
-            'form_params' => [
-                'version' => env('APP_BOT_VERSION'),
-                'identifier' => md5($this->server_addr),
-                'data' => json_encode($completed)
-            ]
-        ]);
     }
     /**
      * Get the console command options.
