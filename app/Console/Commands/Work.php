@@ -282,6 +282,10 @@ class Work extends Command {
                     'data' => json_encode($completed)
                 ]
             ]);
+            if( $this->argument('supervisord') == 'true' )
+            {
+                sleep(15);
+            }
         }
         else if( $this->argument('supervisord') == 'true' )
         {
