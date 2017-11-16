@@ -11,7 +11,7 @@ class Work extends Command {
      *
      * @var string
      */
-    protected $name = 'work';
+    protected $name = 'work {supervisord=false}';
     /**
      * The server address.
      *
@@ -282,6 +282,10 @@ class Work extends Command {
                     'data' => json_encode($completed)
                 ]
             ]);
+        }
+        else if( $this->argument('supervisord') == 'true' )
+        {
+            sleep(300);
         }
     }
     /**
